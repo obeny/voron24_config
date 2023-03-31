@@ -1,0 +1,13 @@
+build:
+make menuconfig
+make clean
+make
+
+program:
+put jumper for the 5V power
+put the BOOT0 jumper
+connect the USB-C
+press "boot" switch (on the right side of USB-C connector)
+check with "lsusb" if '0483:df11 STMicroelectronics STM Device in DFU Mode' device is present
+run program.sh
+remove 5V power and BOOT0 jumper after flashing

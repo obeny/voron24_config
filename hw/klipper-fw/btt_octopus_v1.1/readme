@@ -4,10 +4,9 @@ make clean
 make
 
 program:
-put jumper for the 5V power
-put the BOOT0 jumper
-connect the USB-C
-press "boot" switch (on the right side of USB-C connector)
-check with "lsusb" if '0483:df11 STMicroelectronics STM Device in DFU Mode' device is present
+no jumper changes needed, using canboot for flashing
+short circuit the reset cables quickly twice to enter canboot mode.
+check with "lsusb" if '1d50:6177 OpenMoko, Inc. stm32f446xx' device is present
+it have to be visible under: /dev/serial/by-id/usb-CanBoot*
 run program.sh
-remove 5V power and BOOT0 jumper after flashing
+do a single short circuit to reset
