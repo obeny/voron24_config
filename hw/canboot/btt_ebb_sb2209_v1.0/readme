@@ -4,9 +4,8 @@ make clean
 make
 
 program:
-put jumper for the 5V power
+put jumper for the 5V power - it can be left connected after flashing procedure
 connect the USB-C
 press "boot" and "reset" switches, release "reset" while "boot" is pressed
 check with "lsusb" if '0483:df11 STMicroelectronics STM Device in DFU Mode' device is present
 run program.sh
-remove 5V power jumper after flashing

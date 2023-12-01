@@ -1,1 +1,1 @@
-~/klippy-env/bin/python ~/klipper/scripts/canbus_query.py can0
+~/klippy-env/bin/python canbus_query.py can0

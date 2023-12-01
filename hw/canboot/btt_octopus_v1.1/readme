@@ -4,7 +4,7 @@ make clean
 make
 
 program:
-put jumper for the 5V power
+optional: put jumper for the 5V power - only if connected directly to the PC, not inside the printer
 put the BOOT0 jumper
 connect the USB-C
 press "boot" switch (on the right side of USB-C connector)
