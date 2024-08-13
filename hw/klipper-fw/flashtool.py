@@ -34,6 +34,7 @@ def crc16_ccitt(buf: Union[bytes, bytearray]) -> int:
         crc = ((data << 8) | (crc >> 8)) ^ (data >> 4) ^ (data << 3)
     return crc & 0xFFFF
 
+
 logging.basicConfig(level=logging.INFO)
 CAN_FMT = "<IB3x8s"
 CAN_READER_LIMIT = 1024 * 1024
@@ -67,7 +68,7 @@ CANBUS_CMD_CLEAR_NODE_ID = 0x12
 CANBUS_RESP_NEED_NODEID = 0x20
 CANBUS_NODEID_OFFSET = 128
 
-class FlashCanError(Exception):
+class FlashError(Exception):
     pass
 
 class CanFlasher:
@@ -88,17 +89,26 @@ class CanFlasher:
         output_line("Attempting to connect to bootloader")
         ret = await self.send_command('CONNECT')
         pinfo = ret[:12]
-        mcu_type = ret[12:]
+        mcu_info = ret[12:]
+        ver_bytes: bytes
         ver_bytes, start_addr, self.block_size = struct.unpack("<4sII", pinfo)
         self.app_start_addr = start_addr
-        proto_version = ".".join([str(v) for v in reversed(ver_bytes[:3])])
+        self.software_version = "?"
+        self.proto_version = tuple([v for v in reversed(ver_bytes[:3])])
+        proto_version_str = ".".join([str(v) for v in self.proto_version])
         if self.block_size not in [64, 128, 256, 512]:
-            raise FlashCanError("Invalid Block Size: %d" % (self.block_size,))
-        while mcu_type and mcu_type[-1] == 0x00:
-            mcu_type = mcu_type[:-1]
-        mcu_type = mcu_type.decode()
+            raise FlashError("Invalid Block Size: %d" % (self.block_size,))
+        mcu_info.rstrip(b"\x00")
+        if self.proto_version >= (1, 1, 0):
+            mcu_bytes, sv_bytes = mcu_info.split(b"\x00", maxsplit=1)
+            mcu_type = mcu_bytes.decode()
+            self.software_version = sv_bytes.decode()
+        else:
+            mcu_type = mcu_info.decode()
         output_line(
-            f"Katapult Connected\nProtocol Version: {proto_version}\n"
+            f"Katapult Connected\n"
+            f"Software Version: {self.software_version}\n"
+            f"Protocol Version: {proto_version_str}\n"
             f"Block Size: {self.block_size} bytes\n"
             f"Application Start: 0x{self.app_start_addr:4X}\n"
             f"MCU type: {mcu_type}"
@@ -109,7 +119,7 @@ class CanFlasher:
         ret = await self.send_command('GET_CANBUS_ID')
         mcu_uuid = sum([v << ((5 - i) * 8) for i, v in enumerate(ret[:6])])
         if mcu_uuid != uuid:
-            raise FlashCanError("UUID mismatch (%s vs %s)" % (uuid, mcu_uuid))
+            raise FlashError("UUID mismatch (%s vs %s)" % (uuid, mcu_uuid))
 
     async def send_command(
         self,
@@ -127,7 +137,7 @@ class CanFlasher:
         crc = crc16_ccitt(out_cmd[2:])
         out_cmd.extend(struct.pack("<H", crc))
         out_cmd.extend(CMD_TRAILER)
-        err = Exception()
+        last_err = Exception()
         while tries:
             data = bytearray()
             recd_len = 0
@@ -144,15 +154,17 @@ class CanFlasher:
                         recd_len = data[3] * 4
                         read_done = len(data) == recd_len + 8
                         break
+            except asyncio.CancelledError:
+                raise
             except asyncio.TimeoutError:
                 logging.info(
                     f"Response for command {cmdname} timed out, "
                     f"{tries - 1} tries remaining"
                 )
             except Exception as e:
-                if type(e) != type(err) or str(e) != str(err):
-                    err = e
-                    logging.exception("Can Read Error")
+                if type(e) is type(last_err) and e.args == last_err.args:
+                    last_err = e
+                    logging.exception("Device Read Error")
             else:
                 trailer = data[-2:]
                 recd_crc, = struct.unpack("<H", data[-4:-2])
@@ -190,8 +202,7 @@ class CanFlasher:
             except asyncio.TimeoutError:
                 pass
             await asyncio.sleep(.1)
-        raise FlashCanError("Error sending command [%s] to Can Device"
-                            % (cmdname))
+        raise FlashError("Error sending command [%s] to Device" % (cmdname))
 
     async def send_file(self):
         last_percent = 0
@@ -221,7 +232,7 @@ class CanFlasher:
                     )
                     await asyncio.sleep(.1)
                 else:
-                    raise FlashCanError(
+                    raise FlashError(
                         f"Flash write failed, block address 0x{recd_addr:4X}"
                     )
                 flash_address += self.block_size
@@ -255,7 +266,7 @@ class CanFlasher:
                 await asyncio.sleep(.1)
             else:
                 output_line("Error")
-                raise FlashCanError("Block Request Error, block: %d" % (i,))
+                raise FlashError("Block Request Error, block: %d" % (i,))
             ver_sha.update(resp[4:])
             pct = int(i * self.block_size / float(self.file_size) * 100 + .5)
             if pct >= last_percent + 2:
@@ -264,7 +275,7 @@ class CanFlasher:
         ver_hex = ver_sha.hexdigest().upper()
         fw_hex = self.fw_sha.hexdigest().upper()
         if ver_hex != fw_hex:
-            raise FlashCanError("Checksum mismatch: Expected %s, Received %s"
+            raise FlashError("Checksum mismatch: Expected %s, Received %s"
                                 % (fw_hex, ver_hex))
         output_line("]\n\nVerification Complete: SHA = %s" % (ver_hex))
 
@@ -453,11 +464,11 @@ class CanSocket:
         self, intf: str, uuid: int, fw_path: pathlib.Path, req_only: bool
     ) -> None:
         if not req_only and not fw_path.is_file():
-            raise FlashCanError("Invalid firmware path '%s'" % (fw_path))
+            raise FlashError("Invalid firmware path '%s'" % (fw_path))
         try:
             self.cansock.bind((intf,))
         except Exception:
-            raise FlashCanError("Unable to bind socket to can0")
+            raise FlashError("Unable to bind socket to can0")
         self.closed = False
         self.cansock.setblocking(False)
         self._loop.add_reader(
@@ -468,6 +479,7 @@ class CanSocket:
             return
         await asyncio.sleep(.5)
         self._reset_nodes()
+        await asyncio.sleep(1.0)
         node = self._set_node_id(uuid)
         flasher = CanFlasher(node, fw_path)
         await asyncio.sleep(.5)
@@ -486,7 +498,7 @@ class CanSocket:
         try:
             self.cansock.bind((intf,))
         except Exception:
-            raise FlashCanError("Unable to bind socket to can0")
+            raise FlashError("Unable to bind socket to can0")
         self.closed = False
         self.cansock.setblocking(False)
         self._loop.add_reader(
@@ -513,7 +525,7 @@ class SerialSocket:
     def _handle_response(self) -> None:
         try:
             data = self.serial.read(4096)
-        except self.serial_error as e:
+        except self.serial_error:
             logging.exception("Error on serial read")
             self.close()
         self.node.feed_data(data)
@@ -521,17 +533,17 @@ class SerialSocket:
     def send(self, can_id: int, payload: bytes = b"") -> None:
         try:
             self.serial.write(payload)
-        except self.serial_error as e:
+        except self.serial_error:
             logging.exception("Error on serial write")
             self.close()
 
     async def run(self, intf: str, baud: int, fw_path: pathlib.Path) -> None:
         if not fw_path.is_file():
-            raise FlashCanError("Invalid firmware path '%s'" % (fw_path))
+            raise FlashError("Invalid firmware path '%s'" % (fw_path))
         try:
             import serial
         except ModuleNotFoundError:
-            raise FlashCanError(
+            raise FlashError(
                 "The pyserial python package was not found.  To install "
                 "run the following command in a terminal: \n\n"
                 "   pip3 install pyserial\n\n")
@@ -542,7 +554,7 @@ class SerialSocket:
             serial_dev.port = intf
             serial_dev.open()
         except (OSError, IOError, self.serial_error) as e:
-            raise FlashCanError("Unable to open serial port: %s" % (e,))
+            raise FlashError("Unable to open serial port: %s" % (e,))
         self.serial = serial_dev
         self._loop.add_reader(self.serial.fileno(), self._handle_response)
         flasher = CanFlasher(self.node, fw_path)
@@ -615,19 +627,21 @@ def main():
                 loop.run_until_complete(sock.run_query(intf))
             else:
                 if args.uuid is None:
-                    raise FlashCanError(
+                    raise FlashError(
                         "The 'uuid' option must be specified to flash a device"
                     )
+                output_line(f"Flashing CAN UUID {args.uuid} on interface {intf}")
                 uuid = int(args.uuid, 16)
                 loop.run_until_complete(sock.run(intf, uuid, fpath, req_only))
         else:
             if args.device is None:
-                raise FlashCanError(
+                raise FlashError(
                     "The 'device' option must be specified to flash a device"
                 )
+            output_line(f"Flashing Serial Device {args.device}, baud {args.baud}")
             sock = SerialSocket(loop)
             loop.run_until_complete(sock.run(args.device, args.baud, fpath))
-    except Exception as e:
+    except Exception:
         logging.exception("Flash Error")
         sys.exit(-1)
     finally:
