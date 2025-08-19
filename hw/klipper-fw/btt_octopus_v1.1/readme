@@ -4,10 +4,11 @@ make clean
 make
 
 program:
+no need to open the printer from the bottom
 no jumper changes needed, using canboot for flashing
 short circuit the reset cables quickly twice to enter canboot mode.
 check with "lsusb" if '1d50:6177 OpenMoko, Inc. stm32f446xx' device is present
-it have to be visible under: /dev/serial/by-id/usb-CanBoot*
+it have to be visible under: /dev/serial/by-id/usb-...
 optional: python3 flash_can.py -u d98f36fa792b -r
 run program.sh
 do a single short circuit to reset
