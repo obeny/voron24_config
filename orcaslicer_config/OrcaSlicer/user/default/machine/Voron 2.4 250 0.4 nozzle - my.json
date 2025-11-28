@@ -1,0 +1,53 @@
+{
+    "deretraction_speed": [
+        "40"
+    ],
+    "fan_speedup_time": "1",
+    "from": "User",
+    "inherits": "Voron 2.4 250 0.4 nozzle",
+    "is_custom_defined": "0",
+    "machine_max_acceleration_extruding": [
+        "5000",
+        "20000"
+    ],
+    "machine_max_acceleration_x": [
+        "4000",
+        "20000"
+    ],
+    "machine_max_acceleration_y": [
+        "4000",
+        "20000"
+    ],
+    "machine_max_acceleration_z": [
+        "350",
+        "200"
+    ],
+    "machine_max_speed_x": [
+        "400",
+        "200"
+    ],
+    "machine_max_speed_y": [
+        "400",
+        "200"
+    ],
+    "machine_max_speed_z": [
+        "25",
+        "12"
+    ],
+    "machine_start_gcode": "M190 S[bed_temperature_initial_layer_single]\nM109 S[nozzle_temperature_initial_layer]\nPRINT_START BED=[bed_temperature_initial_layer_single] EXTRUDER=[nozzle_temperature_initial_layer] CHAMBER=[chamber_temperature] MESH=0\n; You can use following code instead if your PRINT_START macro support Chamber and print area bedmesh\n; PRINT_START EXTRUDER=[nozzle_temperature_initial_layer] BED=[bed_temperature_initial_layer_single] Chamber=[chamber_temperature] PRINT_MIN={first_layer_print_min[0]},{first_layer_print_min[1]} PRINT_MAX={first_layer_print_max[0]},{first_layer_print_max[1]}",
+    "name": "Voron 2.4 250 0.4 nozzle - my",
+    "nozzle_type": "stainless_steel",
+    "print_host": "192.168.100.6",
+    "printable_area": [
+        "0x0",
+        "245x0",
+        "245x245",
+        "0x245"
+    ],
+    "printable_height": "180",
+    "printer_settings_id": "Voron 2.4 250 0.4 nozzle - my",
+    "retraction_speed": [
+        "40"
+    ],
+    "version": "2.3.0.3"
+}

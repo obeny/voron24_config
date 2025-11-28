@@ -1,0 +1,49 @@
+{
+    "chamber_temperature": [
+        "55"
+    ],
+    "compatible_printers": [
+        "Voron 2.4 250 0.4 nozzle"
+    ],
+    "default_filament_colour": [
+        "#E01B24"
+    ],
+    "filament_cost": [
+        "90"
+    ],
+    "filament_max_volumetric_speed": [
+        "15"
+    ],
+    "filament_settings_id": [
+        "Generic ABS @System - my"
+    ],
+    "filament_start_gcode": [
+        "; Filament gcode\nSET_PRESSURE_ADVANCE ADVANCE=0.03"
+    ],
+    "from": "User",
+    "hot_plate_temp": [
+        "110"
+    ],
+    "hot_plate_temp_initial_layer": [
+        "110"
+    ],
+    "inherits": "Generic ABS @System",
+    "is_custom_defined": "0",
+    "name": "Generic ABS @System - my",
+    "nozzle_temperature": [
+        "245"
+    ],
+    "nozzle_temperature_initial_layer": [
+        "245"
+    ],
+    "nozzle_temperature_range_high": [
+        "260"
+    ],
+    "nozzle_temperature_range_low": [
+        "230"
+    ],
+    "slow_down_min_speed": [
+        "20"
+    ],
+    "version": "2.3.0.4"
+}
