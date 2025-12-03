@@ -1,2 +1,6 @@
+orcaslicer_config/OrcaSlicer/cache
+orcaslicer_config/OrcaSlicer/log
+orcaslicer_config/OrcaSlicer/user_backup-*
+
 superslicer_config/SuperSlicer/cache
 superslicer_config/SuperSlicer/ui_layout
